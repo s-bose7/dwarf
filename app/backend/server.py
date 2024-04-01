@@ -2,7 +2,13 @@
 import re
 
 from typing import Dict, Any
-from flask import Flask, request, jsonify, Response, redirect
+from flask import (
+    Flask, 
+    request, 
+    jsonify, 
+    Response, 
+    redirect
+)
 from . services.dwarf import Dwarf 
 
 
@@ -23,7 +29,8 @@ def verify_url_pattern(url: str)->bool:
         r'localhost|'  # localhost...
         r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
         r'(?::\d+)?'  # optional port
-        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE
+    )
     return bool(re.match(url_pattern, url))
 
 
@@ -32,21 +39,25 @@ def verify_url_pattern(url: str)->bool:
 def shorten()->Response:
     long_url = request.json["url"]
     valid_url = verify_url_pattern(long_url)
-    if not valid_url:
-        return jsonify({
-            "status_code": 422,
-            "message": "Unprocessable Content",
-            "long_url": long_url
-        })
-    
-    short_url = Dwarf.shorten(url=long_url) 
     # API response
     response: Dict[str, Any] = {
-        "status_code": 200,
-        "short_url": short_url, 
+        "status_code": None,
+        "message": None,
+        "short_url": None, 
         "long_url": long_url,
     }
+    # backend validation
+    # PROBLEM: This response eventualy becoming 200 in the front-end
+    if not valid_url:
+        response["status_code"] = 400
+        response["message"] = "Bad Request"
+        return jsonify(response)
+    
+    response["status_code"] = 200
+    response["message"] = "Ok"
+    response["short_url"] = Dwarf.encode(long_url=long_url) 
     return jsonify(response)
+
 
 
 @app.route("/<identifier>", methods=["GET"])

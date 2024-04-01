@@ -1,34 +1,30 @@
+# app/backend/services/dwarf.py
 
 from typing import Dict
+from app.database.db import DataBase
+
 
 class Dwarf:
 
-    default_domain: str = f"http://localhost:5000/" # http://dwarf.co
+    db = DataBase()
     i32t_identifier: int = 0
-    encode_map: Dict[str, str] = {}
-    decode_map: Dict[str, str] = {}
+    default_domain: str = f"http://localhost:5000/" # http://dwarf.co
 
-    def __init__(self) -> None:
-        pass
-
-    def __encode(long_url: str)->str:
-        if long_url not in Dwarf.encode_map:
+    @staticmethod
+    def encode(long_url: str) -> str:
+        short_url = Dwarf.db.retrieve_url(long_url=long_url)
+        if short_url is None:
+            # Generate a new short URL
             Dwarf.i32t_identifier += 1
             short_url = Dwarf.default_domain + str(Dwarf.i32t_identifier)
-            Dwarf.encode_map[long_url] = short_url
-            Dwarf.decode_map[short_url] = long_url
 
-        return Dwarf.encode_map.get(long_url)
+            # Store the mapping in the database
+            Dwarf.db.insert_url(long_url, short_url)
 
-    @staticmethod
-    def decode(indentifier: str)->str:
-        short_url = Dwarf.default_domain + indentifier
-        if short_url not in Dwarf.decode_map:
-            return ""
-        return Dwarf.decode_map.get(short_url)
-
-
-    @staticmethod
-    def shorten(url: str)->str:
-        short_url = Dwarf.__encode(url)
         return short_url
+
+    @staticmethod
+    def decode(identifier: str) -> str:
+        short_url = Dwarf.default_domain + identifier
+        long_url = Dwarf.db.retrieve_url(short_url=short_url)
+        return long_url if long_url else ""
